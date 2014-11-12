@@ -473,8 +473,8 @@ end
 
 function VinceBuilds:LoadBuild(build)
 	self.isLoadingBuild = true
-	self.isLoadingEquip = build.equip ~= nil
-	self.isLoadingActionSet = build.actionSet ~= nil
+	self.isLoadingEquip = build.equip ~= nil and build.equip ~= false
+	self.isLoadingActionSet = build.actionSet ~= nil and build.actionSet ~= false
 	self.loadBuild = build
 
 	self.wndMain:FindChild("Overlay"):DestroyAllPixies()
