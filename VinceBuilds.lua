@@ -81,7 +81,7 @@ function VinceBuilds:OnLoadForReal()
 end
 
 function VinceBuilds:OnDocLoaded()
-	self.wndMain = Apollo.LoadForm(self.xmlDoc, "VinceBuilds", "FixedHudStratumHigh", self)
+	self.wndMain = Apollo.LoadForm(self.xmlDoc, "VinceBuilds", nil, self)
 	self.wndConfig = Apollo.LoadForm(self.xmlDoc, "VinceBuildsForm", nil, self)
 
 	self.nameInput = self.wndConfig:FindChild("EditBox")
@@ -186,22 +186,39 @@ function VinceBuilds:GetBuildIndexByName(name, mode)
 	end
 end
 
+function VinceBuilds:ConcatArgsTillEnd(nonWhitespace, whitespace, index)
+	local arg = {}
+	for i = index, #nonWhitespace do
+		table.insert(arg, nonWhitespace[i] .. (whitespace[i] or ""))
+	end
+	if #arg == 0 then
+		return ""
+	end
+	return table.concat(arg)
+end
+
 -- no logical "or" in lua's pattern matching. holy shit
---function VinceBuilds:GetArgs(args)
---	local res = {}
---
---	return res
---end
+function VinceBuilds:GetArgs(args)
+	local nonWhitespace = {}
+	local whitespace = {}
+
+	for nw in args:gmatch("%S+") do
+		table.insert(nonWhitespace, nw)
+	end
+	for w in args:gmatch("%s+") do
+		table.insert(whitespace, w)
+	end
+
+	return nonWhitespace, whitespace
+end
 
 function VinceBuilds:OnSlashCommand(slash, args)
-	local arg = args:gmatch([[[^%s]+]])
-	local cmd = arg()
-	local cmd = cmd and cmd:lower() or ""
-	local arg1 = arg() or ""
-	local arg2 = arg() or ""
+	local nonWhitespace, whitespace = self:GetArgs(args)
+
+	local cmd = nonWhitespace[1] and nonWhitespace[1]:lower() or ""
+	local arg1 = self:ConcatArgsTillEnd(nonWhitespace, whitespace, 2)
 
 	local arg1Lower = arg1:lower()
-	local arg2Lower = arg2:lower()
 
 	if cmd == "loadequip" then
 		local equip = self:GetBuildIndexByName(arg1Lower, ModeEquipment)
@@ -275,6 +292,11 @@ function VinceBuilds:OnEquipDropdown()
 	local container = self.linkEquipmentDropdown:FindChild("ChoiceContainer")
 	local buttonList = container:FindChild("ButtonList")
 	buttonList:DestroyChildren()
+
+	local btn = Apollo.LoadForm(self.xmlDoc, "DropdownBtn", buttonList, self)
+	btn:SetData(0)
+	btn:FindChild("BtnText"):SetText("")
+
 	for i, equip in ipairs(self.settings.equipments) do
 		local btn = Apollo.LoadForm(self.xmlDoc, "DropdownBtn", buttonList, self)
 		btn:SetData(i)
@@ -290,9 +312,14 @@ function VinceBuilds:OnDropdownBtn(wndControl)
 		return
 	end
 	local linkedEquipIndex = wndControl:GetData()
+	if linkedEquipIndex == 0 then
+		self.settings.las[row].linkedEquipment = nil
+		self.linkEquipmentDropdown:SetText("")
+	else
+		self.settings.las[row].linkedEquipment = linkedEquipIndex
+		self.linkEquipmentDropdown:SetText(self.settings.equipments[linkedEquipIndex].name)
+	end
 	self.linkEquipmentDropdown:FindChild("ChoiceContainer"):Close()
-	self.settings.las[row].linkedEquipment = linkedEquipIndex
-	self.linkEquipmentDropdown:SetText(self.settings.equipments[linkedEquipIndex].name)
 end
 
 function VinceBuilds:GetModeTable(mode)
@@ -302,11 +329,9 @@ end
 
 function VinceBuilds:OnGridItemClick(wndControl, wndHandler, iRow, iCol, eMouseButton)
 	local build = self:GetModeTable()[iRow]
-	if not build or #self.settings.equipments == 0 then
-		self.linkEquipmentDropdown:Enable(false)
+	if not build then
 		return
 	end
-	self.linkEquipmentDropdown:Enable(true)
 	if self.mode == ModeLAS then
 		if build.linkedEquipment then
 			self.linkEquipmentDropdown:SetText(self.settings.equipments[build.linkedEquipment].name)
