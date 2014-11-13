@@ -72,6 +72,7 @@ function VinceBuilds:OnLoadForReal()
 
 	Apollo.RegisterEventHandler("PlayerEquippedItemChanged", "OnPlayerEquippedItemChanged", self)
 	Apollo.RegisterEventHandler("UnitEnteredCombat", "OnUnitEnteredCombat", self)
+	Apollo.RegisterEventHandler("PlayerResurrected", "OnPlayerResurrected", self)
 	Apollo.RegisterEventHandler("SpecChanged", "OnSpecChanged", self)
 	
 	Apollo.RegisterSlashCommand("vb", "OnSlashCommand", self)
@@ -504,7 +505,8 @@ function VinceBuilds:LoadBuild(build)
 
 	self.wndMain:FindChild("Overlay"):DestroyAllPixies()
 
-	if GameLib.GetPlayerUnit():IsInCombat() then
+	local player = GameLib.GetPlayerUnit()
+	if player:IsInCombat() or player:IsDead() then
 		self.wndMain:FindChild("Overlay"):AddPixie(WaitingPixie)
 	else
 		self.wndMain:FindChild("Overlay"):AddPixie(LoadingPixie)
@@ -578,7 +580,7 @@ function VinceBuilds:LoadActionSet(actionSet)
 	for key, abilityId in ipairs(actionSet.abilities) do
 		currentActionSet[key] = abilityId
 	end
-	local result = ActionSetLib.RequestActionSetChanges(currentActionSet)
+	local result = ActionSetLib.RequestActionSetChanges(currentActionSet) -- ActionSetLib.CodeEnumLimitedActionSetResult
 	
 	self.isLoadingActionSet = false
 	
@@ -620,6 +622,14 @@ function VinceBuilds:OnUnitEnteredCombat(unit, bInCombat)
 			self:LoadBuild(self.loadBuild)
 		end
 	end
+end
+
+function VinceBuilds:OnPlayerResurrected() -- still dead... troll game
+	self.trollGarbageCollection = ApolloTimer.Create(1, false, "troll", {troll = function()
+		if self.isLoadingBuild then
+			self:LoadBuild(self.loadBuild)
+		end
+	end})
 end
 
 function VinceBuilds.ResetSpellTiers()
