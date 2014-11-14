@@ -1,3 +1,9 @@
+local function log(name, value)
+	if SendVarToRover then
+		SendVarToRover(name, value, 0)
+	end
+end
+
 require "Window"
 require "GameLib"
 require "GroupLib"
@@ -97,7 +103,7 @@ function VinceBuilds:OnDocLoaded()
 
 	self.linkDropdown:AttachWindow(self.linkDropdown:FindChild("ChoiceContainer"))
 
-	self:OnSwitch()
+	self:UpdateView()
 
 --	Event_FireGenericEvent("WindowManagementAdd", {wnd = self.wndMain, strName = "Vince Builds"})
 	Event_FireGenericEvent("WindowManagementAdd", {wnd = self.wndConfig, strName = "Vince Builds Config", nSaveVersion = 2})
@@ -430,6 +436,14 @@ end
 
 function VinceBuilds:OnSwitch()
 	self.mode = (self.mode % 2) + 1
+	self:UpdateView()
+	self.nameInput:SetText("")
+	self.nameInput:ClearFocus()
+	self:FillGrid()
+	self:SelectRow(1)
+end
+
+function VinceBuilds:UpdateView()
 	if self.mode == ModeLAS then
 		self.grid:SetColumnText(1, "LAS")
 		self.switch:SetText("Equipment")
@@ -443,10 +457,6 @@ function VinceBuilds:OnSwitch()
 		self.linkDropdownLabel:SetText("Link Equip with Costume:")
 		self.linkDropdown:Enable(true)
 	end
-	self.nameInput:SetText("")
-	self.nameInput:ClearFocus()
-	self:FillGrid()
-	self:SelectRow(1)
 end
 
 function VinceBuilds:OnSaveBuild()
