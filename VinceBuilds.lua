@@ -536,7 +536,6 @@ function VinceBuilds:SaveBuild()
 end
 
 function VinceBuilds:LoadBuild(build)
-	SendVarToRover("build", build, 0)
 	self.isLoadingBuild = true
 	self.isLoadingEquip = build.equip ~= nil and build.equip ~= false
 	self.isLoadingActionSet = build.actionSet ~= nil and build.actionSet ~= false
