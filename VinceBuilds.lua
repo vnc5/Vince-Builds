@@ -475,15 +475,15 @@ function VinceBuilds:InsertBuild(name, mode)
 		elseif mode == ModeEquipment then
 			tbl[index].equip = self:SaveEquip()
 		end
+		return index
 	else
 		table.insert(tbl, {
 			name = name,
 			actionSet = mode == ModeLAS and self:SaveActionSet() or nil,
 			equip = mode == ModeEquipment and self:SaveEquip() or nil
 		})
+		return #tbl
 	end
-
-	return #tbl
 end
 
 function VinceBuilds:OnDelete()
