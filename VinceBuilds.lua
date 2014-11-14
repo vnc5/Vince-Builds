@@ -276,7 +276,7 @@ function VinceBuilds:PrepareBuild(build)
 	local equip = build.linkedEquipment and self.settings.equipments[build.linkedEquipment]
 	local prep = {
 		actionSet = build.actionSet,
-		equip = build.equip or equip.equip,
+		equip = build.equip or (equip and equip.equip),
 	}
 	prep.costume = equip and equip.linkedCostume
 	return prep
