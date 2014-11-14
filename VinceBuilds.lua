@@ -87,18 +87,20 @@ function VinceBuilds:OnDocLoaded()
 
 	self.nameInput = self.wndConfig:FindChild("EditBox")
 	self.grid = self.wndConfig:FindChild("Grid")
-	self.linkEquipmentDropdown = self.wndConfig:FindChild("LinkedEquipment")
-	self.linkEquipmentDropdownLabel = self.wndConfig:FindChild("Label")
+	self.linkDropdown = self.wndConfig:FindChild("LinkDropdown")
+	self.linkDropdownLabel = self.wndConfig:FindChild("LinkDropdownLabel")
 	self.switch = self.wndConfig:FindChild("Switch")
 
 	if self.settings.offsets then
 		self.wndMain:SetAnchorOffsets(unpack(self.settings.offsets))
 	end
 
-	self.linkEquipmentDropdown:AttachWindow(self.linkEquipmentDropdown:FindChild("ChoiceContainer"))
+	self.linkDropdown:AttachWindow(self.linkDropdown:FindChild("ChoiceContainer"))
+
+	self:OnSwitch()
 
 --	Event_FireGenericEvent("WindowManagementAdd", {wnd = self.wndMain, strName = "Vince Builds"})
-	Event_FireGenericEvent("WindowManagementAdd", {wnd = self.wndConfig, strName = "Vince Builds Config"})
+	Event_FireGenericEvent("WindowManagementAdd", {wnd = self.wndConfig, strName = "Vince Builds Config", nSaveVersion = 2})
 end
 
 function VinceBuilds:OnVinceBuildsClick(wndHandler, wndControl, eMouseButton, nPosX, nPosY, bDoubleClick)
@@ -265,13 +267,13 @@ function VinceBuilds:ToggleVinceBuilds()
 end
 
 function VinceBuilds:PrepareBuild(build)
-	if build.equip then
-		return build
-	end
-	return {
+	local equip = build.linkedEquipment and self.settings.equipments[build.linkedEquipment]
+	local prep = {
 		actionSet = build.actionSet,
-		equip = build.linkedEquipment and self.settings.equipments[build.linkedEquipment].equip
+		equip = build.equip or equip.equip,
 	}
+	prep.costume = equip and equip.linkedCostume
+	return prep
 end
 
 function VinceBuilds:OnLASBtn(wndControl)
@@ -284,25 +286,42 @@ function VinceBuilds:OnLASBtn(wndControl)
 	self.wndMain:FindChild("ChoiceContainer"):Close()
 end
 
-function VinceBuilds:OnEquipDropdown()
+function VinceBuilds:OnLinkDropdown()
 	local row = self.grid:GetCurrentRow()
 	if not row then
 		return
 	end
 
-	local container = self.linkEquipmentDropdown:FindChild("ChoiceContainer")
+	local container = self.linkDropdown:FindChild("ChoiceContainer")
 	local buttonList = container:FindChild("ButtonList")
 	buttonList:DestroyChildren()
 
-	local btn = Apollo.LoadForm(self.xmlDoc, "DropdownBtn", buttonList, self)
-	btn:SetData(0)
-	btn:FindChild("BtnText"):SetText("")
-
-	for i, equip in ipairs(self.settings.equipments) do
+	if self.mode == ModeLAS then
 		local btn = Apollo.LoadForm(self.xmlDoc, "DropdownBtn", buttonList, self)
-		btn:SetData(i)
-		btn:FindChild("BtnText"):SetText(tostring(equip.name))
+		btn:SetData(0)
+		btn:FindChild("BtnText"):SetText("")
+
+		for i, equip in ipairs(self.settings.equipments) do
+			local btn = Apollo.LoadForm(self.xmlDoc, "DropdownBtn", buttonList, self)
+			btn:SetData(i)
+			btn:FindChild("BtnText"):SetText(tostring(equip.name))
+		end
+	elseif self.mode == ModeEquipment then
+		local btn = Apollo.LoadForm(self.xmlDoc, "DropdownBtn", buttonList, self)
+		btn:SetData(-1)
+		btn:FindChild("BtnText"):SetText("")
+
+		local btn = Apollo.LoadForm(self.xmlDoc, "DropdownBtn", buttonList, self)
+		btn:SetData(0)
+		btn:FindChild("BtnText"):SetText("No Costume")
+
+		for i = 1, GameLib.GetCostumeCount() do
+			local btn = Apollo.LoadForm(self.xmlDoc, "DropdownBtn", buttonList, self)
+			btn:SetData(i)
+			btn:FindChild("BtnText"):SetText("Costume " .. i)
+		end
 	end
+
 	local nLeft, nTop, nRight, nBottom = container:GetAnchorOffsets()
 	container:SetAnchorOffsets(nLeft, nTop, nRight, nTop + buttonList:ArrangeChildrenVert(0) + 62)
 end
@@ -312,15 +331,28 @@ function VinceBuilds:OnDropdownBtn(wndControl)
 	if not row then
 		return
 	end
-	local linkedEquipIndex = wndControl:GetData()
-	if linkedEquipIndex == 0 then
-		self.settings.las[row].linkedEquipment = nil
-		self.linkEquipmentDropdown:SetText("")
-	else
-		self.settings.las[row].linkedEquipment = linkedEquipIndex
-		self.linkEquipmentDropdown:SetText(self.settings.equipments[linkedEquipIndex].name)
+	local build = self:GetModeTable()[row]
+	local value = wndControl:GetData()
+
+	if self.mode == ModeLAS then
+		if value == 0 then
+			build.linkedEquipment = nil
+			self.linkDropdown:SetText("")
+		else
+			build.linkedEquipment = value
+			self.linkDropdown:SetText(self.settings.equipments[value].name)
+		end
+	elseif self.mode == ModeEquipment then
+		if value == -1 then
+			build.linkedCostume = nil
+			self.linkDropdown:SetText("")
+		else
+			build.linkedCostume = value
+			self.linkDropdown:SetText(value == 0 and "No Costume" or "Costume " .. value)
+		end
 	end
-	self.linkEquipmentDropdown:FindChild("ChoiceContainer"):Close()
+
+	self.linkDropdown:FindChild("ChoiceContainer"):Close()
 end
 
 function VinceBuilds:GetModeTable(mode)
@@ -335,9 +367,15 @@ function VinceBuilds:OnGridItemClick(wndControl, wndHandler, iRow, iCol, eMouseB
 	end
 	if self.mode == ModeLAS then
 		if build.linkedEquipment then
-			self.linkEquipmentDropdown:SetText(self.settings.equipments[build.linkedEquipment].name)
+			self.linkDropdown:SetText(self.settings.equipments[build.linkedEquipment].name)
 		else
-			self.linkEquipmentDropdown:SetText("")
+			self.linkDropdown:SetText("")
+		end
+	elseif self.mode == ModeEquipment then
+		if build.linkedCostume then
+			self.linkDropdown:SetText(build.linkedCostume == 0 and "No Costume" or "Costume " .. build.linkedCostume)
+		else
+			self.linkDropdown:SetText("")
 		end
 	end
 	self.nameInput:SetText(build.name)
@@ -396,14 +434,14 @@ function VinceBuilds:OnSwitch()
 		self.grid:SetColumnText(1, "LAS")
 		self.switch:SetText("Equipment")
 		self.switch:SetTooltip("Switch to Equipment")
-		self.linkEquipmentDropdown:Show(true, true)
-		self.linkEquipmentDropdownLabel:Show(true, true)
+		self.linkDropdownLabel:SetText("Link LAS with Equip:")
+		self.linkDropdown:Enable(#self.settings.equipments > 0)
 	elseif self.mode == ModeEquipment then
 		self.grid:SetColumnText(1, "Equipment")
 		self.switch:SetText("LAS")
 		self.switch:SetTooltip("Switch to LAS")
-		self.linkEquipmentDropdown:Show(false, true)
-		self.linkEquipmentDropdownLabel:Show(false, true)
+		self.linkDropdownLabel:SetText("Link Equip with Costume:")
+		self.linkDropdown:Enable(true)
 	end
 	self.nameInput:SetText("")
 	self.nameInput:ClearFocus()
@@ -498,6 +536,7 @@ function VinceBuilds:SaveBuild()
 end
 
 function VinceBuilds:LoadBuild(build)
+	SendVarToRover("build", build, 0)
 	self.isLoadingBuild = true
 	self.isLoadingEquip = build.equip ~= nil and build.equip ~= false
 	self.isLoadingActionSet = build.actionSet ~= nil and build.actionSet ~= false
@@ -512,6 +551,9 @@ function VinceBuilds:LoadBuild(build)
 		self.wndMain:FindChild("Overlay"):AddPixie(LoadingPixie)
 
 		if self.isLoadingEquip then
+			if build.costume then
+				GameLib.SetCostumeIndex(build.costume)
+			end
 			self:LoadEquip(build.equip)
 		end
 		if self.isLoadingActionSet then
