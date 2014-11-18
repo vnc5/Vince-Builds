@@ -61,18 +61,6 @@ function VinceBuilds:Init()
 end
 
 function VinceBuilds:OnLoad()
-	self.onLoadDelayTimer = ApolloTimer.Create(.5, true, "OnLoadForReal", self)
-end
-
-function VinceBuilds:OnLoadForReal()
-	local errorDialog = Apollo.GetAddon("ErrorDialog")
-	local interfaceMenuList = Apollo.GetAddon("InterfaceMenuList")
-	if errorDialog and errorDialog.wndReportBug and interfaceMenuList and interfaceMenuList.wndMain then
-		self.onLoadDelayTimer:Stop()
-	else
-		return
-	end
-	
 	self.xmlDoc = XmlDoc.CreateFromFile("VinceBuilds.xml")
 	self.xmlDoc:RegisterCallback("OnDocLoaded", self)
 
@@ -80,7 +68,7 @@ function VinceBuilds:OnLoadForReal()
 	Apollo.RegisterEventHandler("UnitEnteredCombat", "OnUnitEnteredCombat", self)
 	Apollo.RegisterEventHandler("PlayerResurrected", "OnPlayerResurrected", self)
 	Apollo.RegisterEventHandler("SpecChanged", "OnSpecChanged", self)
-	
+
 	Apollo.RegisterSlashCommand("vb", "OnSlashCommand", self)
 	Apollo.RegisterSlashCommand("vincebuilds", "OnSlashCommand", self)
 
