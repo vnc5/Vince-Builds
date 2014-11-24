@@ -94,8 +94,36 @@ function VinceBuilds:OnDocLoaded()
 
 	self:UpdateView()
 
+	self:HookIntoImprovedSalvage()
+
 --	Event_FireGenericEvent("WindowManagementAdd", {wnd = self.wndMain, strName = "Vince Builds"})
 	Event_FireGenericEvent("WindowManagementAdd", {wnd = self.wndConfig, strName = "Vince Builds Config", nSaveVersion = 2})
+end
+
+function VinceBuilds:HookIntoImprovedSalvage()
+	local improvedSalvage = Apollo.GetAddon("ImprovedSalvage")
+	if improvedSalvage then
+		local orig = improvedSalvage.OnSalvageAll
+		improvedSalvage.OnSalvageAll = function(...)
+			orig(...)
+
+			local equipments = {}
+			for i, equip in ipairs(self.settings.equipments) do
+				for chatLinkString in pairs(equip.equip) do
+					equipments[chatLinkString] = true
+				end
+			end
+
+			for i = #improvedSalvage.arItemList, 1, -1 do
+				local item = improvedSalvage.arItemList[i]
+				if item:IsEquippable() and equipments[item:GetChatLinkString()] then
+					table.remove(improvedSalvage.arItemList, i)
+				end
+			end
+
+			improvedSalvage:RedrawAll()
+		end
+	end
 end
 
 function VinceBuilds:OnVinceBuildsClick(wndHandler, wndControl, eMouseButton, nPosX, nPosY, bDoubleClick)
