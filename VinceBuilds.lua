@@ -25,6 +25,9 @@ local WaitingPixie = {
 	}
 }
 
+local IconWidth = 62
+local IconHeight = 56
+
 local ModeLAS = 1
 local ModeEquipment = 2
 
@@ -50,7 +53,9 @@ function VinceBuilds:new(o)
 			[GameLib.CodeEnumEquippedItems.WeaponPrimary] = true
 		},
 		equipments = {},
-		las = {}
+		las = {},
+		hideIcon = false,
+		iconAlpha = 1
 	}
 	o.settings = TableUtil:Copy(o.defaultSettings)
     return setmetatable(o, self)
@@ -78,6 +83,7 @@ end
 function VinceBuilds:OnDocLoaded()
 	self.wndMain = Apollo.LoadForm(self.xmlDoc, "VinceBuilds", nil, self)
 	self.wndConfig = Apollo.LoadForm(self.xmlDoc, "VinceBuildsForm", nil, self)
+	self.wndOptions = Apollo.LoadForm(self.xmlDoc, "VinceBuildsOptions", nil, self)
 
 	self.overlay = self.wndMain:FindChild("Overlay")
 	self.nameInput = self.wndConfig:FindChild("EditBox")
@@ -85,6 +91,9 @@ function VinceBuilds:OnDocLoaded()
 	self.linkDropdown = self.wndConfig:FindChild("LinkDropdown")
 	self.linkDropdownLabel = self.wndConfig:FindChild("LinkDropdownLabel")
 	self.switch = self.wndConfig:FindChild("Switch")
+
+	self.wndMain:Show(not self.settings.hideIcon, true)
+	self.wndMain:SetBGOpacity(self.settings.iconAlpha)
 
 	if self.settings.offsets then
 		self.wndMain:SetAnchorOffsets(unpack(self.settings.offsets))
@@ -98,6 +107,7 @@ function VinceBuilds:OnDocLoaded()
 
 --	Event_FireGenericEvent("WindowManagementAdd", {wnd = self.wndMain, strName = "Vince Builds"})
 	Event_FireGenericEvent("WindowManagementAdd", {wnd = self.wndConfig, strName = "Vince Builds Config", nSaveVersion = 2})
+	Event_FireGenericEvent("WindowManagementAdd", {wnd = self.wndOptions, strName = "Vince Builds Options"})
 end
 
 function VinceBuilds:HookIntoImprovedSalvage()
@@ -175,10 +185,14 @@ function VinceBuilds:OnVinceBuildsClick(wndHandler, wndControl, eMouseButton, nP
 		container:SetAnchorOffsets(oLeft, oTop, oRight, oBottom)
 		container:SetAnchorPoints(pLeft, pTop, pRight, pBottom)
 	elseif eMouseButton == GameLib.CodeEnumInputMouse.Right then
-		self.wndConfig:Show(not self.wndConfig:IsVisible(), true)
-		self:FillGrid()
-		self:SelectRow(1)
+		self:OpenConfig()
 	end
+end
+
+function VinceBuilds:OpenConfig()
+	self.wndConfig:Show(not self.wndConfig:IsVisible(), true)
+	self:FillGrid()
+	self:SelectRow(1)
 end
 
 function VinceBuilds:OnVinceBuildsMouseUp(wndHandler, wndControl)
@@ -280,9 +294,27 @@ function VinceBuilds:OnSlashCommand(slash, args)
 --
 --		self.settings.las[las].linkedEquipment = equip
 	elseif cmd == "reset" then
-		self.wndMain:SetAnchorOffsets(-31, -28, 31, 28)
+		self:Reset()
+	elseif cmd == "config" then
+		self:OpenConfig()
+	elseif cmd == "options" then
+		self:OpenOptions()
 	else
-		Print(("/%s [ loadequip | loadlas | saveequip | savelas | reset ]"):format(slash))
+		Print(("/%s [ loadequip | loadlas | saveequip | savelas | reset | config | options ]"):format(slash))
+	end
+end
+
+function VinceBuilds:Reset()
+	local halfWidth = IconWidth / 2
+	local halfHeight = IconHeight / 2
+	self.settings.hideIcon = self.defaultSettings.hideIcon
+	self.settings.iconAlpha = self.defaultSettings.iconAlpha
+	self.wndMain:SetAnchorOffsets(-halfWidth, -halfHeight, halfWidth, halfHeight)
+	self.wndMain:SetBGOpacity(self.settings.iconAlpha)
+	self.wndMain:Show(not self.settings.hideIcon, true)
+
+	if self.wndOptions:IsShown() then
+		self:OpenOptions()
 	end
 end
 
@@ -534,6 +566,80 @@ function VinceBuilds:OnClose()
 	if self.wndConfig then
 		self.wndConfig:Show(false, true)
 	end
+end
+
+function VinceBuilds:OnCloseOptions()
+	if self.wndOptions then
+		self.wndOptions:Show(false, true)
+	end
+end
+
+function VinceBuilds:OnOpenOptions()
+	self:OpenOptions()
+end
+
+function VinceBuilds:OpenOptions()
+	self.wndOptions:Invoke()
+	self.wndOptions:FindChild("HideIcon"):SetCheck(self.settings.hideIcon)
+
+	self:InitSliderWidget(self.wndOptions:FindChild("Height"), 20, 100, 1, self.wndMain:GetHeight(), 0, function(value)
+		local left, top, right, bottom = self.wndMain:GetAnchorOffsets()
+		self.wndMain:SetAnchorOffsets(left, top, right, top + value)
+	end)
+
+	self:InitSliderWidget(self.wndOptions:FindChild("Width"), 20, 100, 1, self.wndMain:GetWidth(), 0, function(value)
+		local left, top, right, bottom = self.wndMain:GetAnchorOffsets()
+		self.wndMain:SetAnchorOffsets(left, top, left + value, bottom)
+	end)
+
+	self:InitSliderWidget(self.wndOptions:FindChild("Alpha"), 0, 1, .1, self.wndMain:GetBGOpacity(), 2, function(value)
+		value = math.max(math.min(value, 1), 0)
+		self.settings.iconAlpha = value
+		self.wndMain:SetBGOpacity(value)
+	end)
+end
+
+function VinceBuilds:OnHideIcon(wndHandler, wndControl)
+	self.settings.hideIcon = wndControl:IsChecked()
+	self.wndMain:Show(not self.settings.hideIcon)
+end
+
+function VinceBuilds:InitSliderWidget(frame, min, max, tick, value, roundDigits, callback)
+	frame:SetData({
+		callback = callback,
+		digits = roundDigits
+	})
+	frame:FindChild("Slider"):SetMinMax(min, max, tick)
+	frame:FindChild("Slider"):SetValue(self.round(value, roundDigits))
+	frame:FindChild("Input"):SetText(tostring(self.round(value, roundDigits)))
+	frame:FindChild("Min"):SetText(tostring(min))
+	frame:FindChild("Max"):SetText(tostring(max))
+	return frame
+end
+
+function VinceBuilds:OnSliderWidget(wndHandler, wndControl, value)
+	value = self:UpdateSliderWidget(wndHandler, value)
+	wndHandler:GetParent():GetData().callback(value)
+end
+
+function VinceBuilds:UpdateSliderWidget(wndHandler, value)
+	local parent = wndHandler:GetParent()
+	if wndHandler:GetName() == "Input" then
+		value = tonumber(value)
+		if not value then
+			return nil
+		end
+	else
+		value = self.round(value, wndHandler:GetParent():GetData().digits)
+		parent:FindChild("Input"):SetText(tostring(value))
+	end
+	parent:FindChild("Slider"):SetValue(value)
+	return value
+end
+
+function VinceBuilds.round(num, digits)
+	local mult = 10^(digits or 0)
+	return math.floor(num * mult + .5) / mult
 end
 
 function VinceBuilds:OnSave(eType)
