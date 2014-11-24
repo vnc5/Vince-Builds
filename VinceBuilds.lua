@@ -79,6 +79,7 @@ function VinceBuilds:OnDocLoaded()
 	self.wndMain = Apollo.LoadForm(self.xmlDoc, "VinceBuilds", nil, self)
 	self.wndConfig = Apollo.LoadForm(self.xmlDoc, "VinceBuildsForm", nil, self)
 
+	self.overlay = self.wndMain:FindChild("Overlay")
 	self.nameInput = self.wndConfig:FindChild("EditBox")
 	self.grid = self.wndConfig:FindChild("Grid")
 	self.linkDropdown = self.wndConfig:FindChild("LinkDropdown")
@@ -102,10 +103,10 @@ function VinceBuilds:OnVinceBuildsClick(wndHandler, wndControl, eMouseButton, nP
 		return
 	end
 
-	self.wndMain:FindChild("Overlay"):SetSprite("CRB_ActionBarIconSprites:sprAS_ButtonPress")
+	self.overlay:SetSprite("CRB_ActionBarIconSprites:sprAS_ButtonPress")
 
 	if eMouseButton == GameLib.CodeEnumInputMouse.Left then
-		local key = Apollo.IsControlKeyDown() and "equipments" or "las"
+		local key = Apollo.IsAltKeyDown() and "equipments" or "las"
 		local container = self.wndMain:FindChild("ChoiceContainer")
 		container:Show(true, true)
 		container:DestroyChildren()
@@ -156,20 +157,20 @@ function VinceBuilds:OnVinceBuildsMouseUp(wndHandler, wndControl)
 	if wndControl ~= self.wndMain then
 		return
 	end
-	self.wndMain:FindChild("Overlay"):SetSprite("CRB_ActionBarIconSprites:sprActionBar_GreenBorder")
+	self.overlay:SetSprite("CRB_ActionBarIconSprites:sprActionBar_GreenBorder")
 end
 function VinceBuilds:OnVinceBuildsMouseEnter(wndHandler, wndControl)
 	if wndControl ~= self.wndMain then
 		return
 	end
-	self.wndMain:FindChild("Overlay"):SetSprite("CRB_ActionBarIconSprites:sprActionBar_GreenBorder")
+	self.overlay:SetSprite("CRB_ActionBarIconSprites:sprActionBar_GreenBorder")
 end
 
 function VinceBuilds:OnVinceBuildsMouseExit(wndHandler, wndControl)
 	if wndControl ~= self.wndMain then
 		return
 	end
-	self.wndMain:FindChild("Overlay"):SetSprite("")
+	self.overlay:SetSprite("")
 end
 
 function VinceBuilds:GetBuildIndexByName(name, mode)
@@ -541,13 +542,13 @@ function VinceBuilds:LoadBuild(build)
 	self.isLoadingActionSet = build.actionSet ~= nil and build.actionSet ~= false
 	self.loadBuild = build
 
-	self.wndMain:FindChild("Overlay"):DestroyAllPixies()
+	self.overlay:DestroyAllPixies()
 
 	local player = GameLib.GetPlayerUnit()
 	if player:IsInCombat() or player:IsDead() then
-		self.wndMain:FindChild("Overlay"):AddPixie(WaitingPixie)
+		self.overlay:AddPixie(WaitingPixie)
 	else
-		self.wndMain:FindChild("Overlay"):AddPixie(LoadingPixie)
+		self.overlay:AddPixie(LoadingPixie)
 
 		if self.isLoadingEquip then
 			if build.costume then
@@ -634,7 +635,7 @@ function VinceBuilds:UpdateFinishedLoadingBuild()
 		self.isLoadingBuild = false
 	end
 	if wasLoadingBuild and not self.isLoadingBuild then
-		self.wndMain:FindChild("Overlay"):DestroyAllPixies()
+		self.overlay:DestroyAllPixies()
 	end
 end
 
@@ -657,8 +658,8 @@ end
 function VinceBuilds:OnUnitEnteredCombat(unit, bInCombat)
 	if unit and unit:IsValid() and unit:IsThePlayer() and self.isLoadingBuild then
 		if bInCombat then
-			self.wndMain:FindChild("Overlay"):DestroyAllPixies()
-			self.wndMain:FindChild("Overlay"):AddPixie(WaitingPixie)
+			self.overlay:DestroyAllPixies()
+			self.overlay:AddPixie(WaitingPixie)
 		else
 			self:LoadBuild(self.loadBuild)
 		end
