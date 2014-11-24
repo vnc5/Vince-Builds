@@ -105,13 +105,14 @@ function VinceBuilds:OnVinceBuildsClick(wndHandler, wndControl, eMouseButton, nP
 	self.wndMain:FindChild("Overlay"):SetSprite("CRB_ActionBarIconSprites:sprAS_ButtonPress")
 
 	if eMouseButton == GameLib.CodeEnumInputMouse.Left then
+		local key = Apollo.IsControlKeyDown() and "equipments" or "las"
 		local container = self.wndMain:FindChild("ChoiceContainer")
 		container:Show(true, true)
 		container:DestroyChildren()
-		for i, las in ipairs(self.settings.las) do
-			local btn = Apollo.LoadForm(self.xmlDoc, "LASButton", container, self)
-			btn:SetData(i)
-			btn:FindChild("BtnText"):SetText(las.name)
+		for i, build in ipairs(self.settings[key]) do
+			local btn = Apollo.LoadForm(self.xmlDoc, "BuildButton", container, self)
+			btn:SetData({key, i})
+			btn:FindChild("BtnText"):SetText(build.name)
 		end
 
 		local oLeft, oTop, oRight, oBottom = self.wndMain:GetAnchorOffsets()
@@ -270,13 +271,14 @@ function VinceBuilds:PrepareBuild(build)
 	return prep
 end
 
-function VinceBuilds:OnLASBtn(wndControl)
-	local las = self.settings.las[wndControl:GetData()]
-	if not las then
+function VinceBuilds:OnBuildBtn(wndControl)
+	local key, i = unpack(wndControl:GetData())
+	local build = self.settings[key][i]
+	if not build then
 		return
 	end
 
-	self:LoadBuild(self:PrepareBuild(las))
+	self:LoadBuild(self:PrepareBuild(build))
 	self.wndMain:FindChild("ChoiceContainer"):Close()
 end
 
