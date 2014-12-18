@@ -1,9 +1,3 @@
-local function log(name, value)
-	if SendVarToRover then
-		SendVarToRover(name, value, 0)
-	end
-end
-
 require "Window"
 require "GameLib"
 require "GroupLib"
@@ -25,11 +19,51 @@ local WaitingPixie = {
 	}
 }
 
+local SavedEquipSlots = {
+	[GameLib.CodeEnumEquippedItems.Chest] = true,
+	[GameLib.CodeEnumEquippedItems.Legs] = true,
+	[GameLib.CodeEnumEquippedItems.Head] = true,
+	[GameLib.CodeEnumEquippedItems.Shoulder] = true,
+	[GameLib.CodeEnumEquippedItems.Feet] = true,
+	[GameLib.CodeEnumEquippedItems.Hands] = true,
+	[GameLib.CodeEnumEquippedItems.WeaponTool] = true,
+	[GameLib.CodeEnumEquippedItems.WeaponAttachment] = true,
+	[GameLib.CodeEnumEquippedItems.System] = true,
+	[GameLib.CodeEnumEquippedItems.Augment] = true,
+	[GameLib.CodeEnumEquippedItems.Implant] = true,
+	[GameLib.CodeEnumEquippedItems.Gadget] = true,
+	[GameLib.CodeEnumEquippedItems.Shields] = true,
+	[GameLib.CodeEnumEquippedItems.WeaponPrimary] = true
+}
+
 local IconWidth = 62
 local IconHeight = 56
 
 local ModeLAS = 1
 local ModeEquipment = 2
+
+
+local function deepCopy(t)
+	if type(t) == "table" then
+		local copy = {}
+		for k, v in next, t do
+			copy[deepCopy(k)] = deepCopy(v)
+		end
+		return copy
+	else
+		return t
+	end
+end
+
+local function extend(...)
+	local args = {...}
+	for i = 2, #args do
+		for key, value in pairs(args[i]) do
+			args[1][key] = value
+		end
+	end
+	return args[1]
+end
 
 
 local VinceBuilds = {}
@@ -38,26 +72,12 @@ function VinceBuilds:new(o)
 	o = o or {}
 	o.mode = ModeLAS
 	o.defaultSettings = {
-		savedEquipSlots = {
-			[GameLib.CodeEnumEquippedItems.Chest] = true,
-			[GameLib.CodeEnumEquippedItems.Feet] = true,
-			[GameLib.CodeEnumEquippedItems.Gadget] = true,
-			[GameLib.CodeEnumEquippedItems.Hands] = true,
-			[GameLib.CodeEnumEquippedItems.Head] = true,
-			[GameLib.CodeEnumEquippedItems.Implant] = true,
-			[GameLib.CodeEnumEquippedItems.Legs] = true,
-			[GameLib.CodeEnumEquippedItems.Shields] = true,
-			[GameLib.CodeEnumEquippedItems.Shoulder] = true,
-			[GameLib.CodeEnumEquippedItems.System] = true,
-			[GameLib.CodeEnumEquippedItems.WeaponAttachment] = true,
-			[GameLib.CodeEnumEquippedItems.WeaponPrimary] = true
-		},
 		equipments = {},
 		las = {},
 		hideIcon = false,
 		iconAlpha = 1
 	}
-	o.settings = TableUtil:Copy(o.defaultSettings)
+	o.settings = deepCopy(o.defaultSettings)
     return setmetatable(o, self)
 end
 
@@ -657,7 +677,7 @@ function VinceBuilds:OnRestore(eType, tSavedData)
 		return
 	end
 
-	self.settings = tSavedData
+	self.settings = extend(deepCopy(self.defaultSettings), tSavedData)
 end
 
 
@@ -699,9 +719,9 @@ end
 function VinceBuilds:SaveEquip()
 	local items = {}
 	for key, item in ipairs(GameLib.GetPlayerUnit():GetEquippedItems()) do
-		-- if self.settings.savedEquipSlots[item:GetSlot()] then
+		if SavedEquipSlots[item:GetSlot()] then
 			items[item:GetChatLinkString()] = true
-		-- end
+		end
 	end
 	return items
 end
@@ -711,7 +731,8 @@ function VinceBuilds:LoadEquip(equip)
 	
 	for key, item in ipairs(GameLib.GetPlayerUnit():GetInventoryItems()) do
 		local itemInBag = item.itemInBag
-		if itemInBag:IsEquippable() and equip[itemInBag:GetChatLinkString()] then
+		local validSlot = SavedEquipSlots[itemInBag:GetSlot()]
+		if validSlot and equip[itemInBag:GetChatLinkString()] then
 			GameLib.EquipBagItem(item.nBagSlot + 1)
 			return
 		end
@@ -734,7 +755,8 @@ function VinceBuilds:SaveActionSet()
 	return {
 		spec = spec,
 		abilities = abilities,
-		abilityTiers = abilityTiers
+		abilityTiers = abilityTiers,
+		innateIndex = GameLib.GetCurrentClassInnateAbilityIndex()
 	}
 end
 
@@ -757,6 +779,10 @@ function VinceBuilds:LoadActionSet(actionSet)
 		currentActionSet[key] = abilityId
 	end
 	local result = ActionSetLib.RequestActionSetChanges(currentActionSet) -- ActionSetLib.CodeEnumLimitedActionSetResult
+
+	if actionSet.innateIndex and actionSet.innateIndex ~= GameLib.GetCurrentClassInnateAbilityIndex() then
+		GameLib.SetCurrentClassInnateAbilityIndex(actionSet.innateIndex)
+	end
 	
 	self.isLoadingActionSet = false
 	
@@ -777,8 +803,11 @@ function VinceBuilds:OnSpecChanged()
 	if not self.isLoadingActionSet then
 		return
 	end
-	
-	self:LoadActionSet(self.loadBuild.actionSet)
+
+	-- Still can't change LAS yet...
+	self.trollGarbageCollection2 = ApolloTimer.Create(.2, false, "troll", {troll = function()
+		self:LoadActionSet(self.loadBuild.actionSet)
+	end})
 end
 
 function VinceBuilds:OnPlayerEquippedItemChanged()
