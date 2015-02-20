@@ -152,6 +152,7 @@ function VinceBuilds:HookIntoImprovedSalvage()
 	end
 end
 
+local keytexts = {equipments = "EQ: ", las = "LAS: "}
 function VinceBuilds:OnVinceBuildsClick(wndHandler, wndControl, eMouseButton, nPosX, nPosY, bDoubleClick)
 	if wndControl ~= self.wndMain then
 		return
@@ -167,7 +168,7 @@ function VinceBuilds:OnVinceBuildsClick(wndHandler, wndControl, eMouseButton, nP
 		for i, build in ipairs(self.settings[key]) do
 			local btn = Apollo.LoadForm(self.xmlDoc, "BuildButton", container, self)
 			btn:SetData({key, i})
-			btn:FindChild("BtnText"):SetText(build.name)
+			btn:FindChild("BtnText"):SetText(keytexts[key]..build.name)
 		end
 
 		local oLeft, oTop, oRight, oBottom = self.wndMain:GetAnchorOffsets()
