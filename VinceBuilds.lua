@@ -167,7 +167,7 @@ function VinceBuilds:OnVinceBuildsClick(wndHandler, wndControl, eMouseButton, nP
 		container:DestroyChildren()
 		for i, build in ipairs(self.settings[key]) do
 			local btn = Apollo.LoadForm(self.xmlDoc, "BuildButton", container, self)
-			btn:SetData({key, i})
+			btn:SetData(build)
 			btn:FindChild("BtnText"):SetText(keytexts[key]..build.name)
 		end
 
@@ -349,14 +349,20 @@ function VinceBuilds:PrepareBuild(build)
 	return prep
 end
 
-function VinceBuilds:OnBuildBtn(wndControl)
-	local key, i = unpack(wndControl:GetData())
-	local build = self.settings[key][i]
-	if not build then
-		return
+function VinceBuilds:OnBuildBtnUp(wndHandler, wndControl, eMouseButton)
+	local build = wndControl:GetData()
+	-- Load build
+	if eMouseButton == GameLib.CodeEnumInputMouse.Left then
+		self:LoadBuild(self:PrepareBuild(build))
+	-- Save build
+	elseif eMouseButton == GameLib.CodeEnumInputMouse.Right then
+		self:InsertBuild(build.name, build.equip and ModeEquipment or ModeLAS)
+		-- Also save linked equipment unless shift
+		if build.linkedEquipment and not Apollo.IsShiftKeyDown() then
+			local equip = self.settings.equipments[build.linkedEquipment]
+			self:InsertBuild(equip.name, ModeEquipment)
+		end
 	end
-
-	self:LoadBuild(self:PrepareBuild(build))
 	self.wndMain:FindChild("ChoiceContainer"):Close()
 end
 
