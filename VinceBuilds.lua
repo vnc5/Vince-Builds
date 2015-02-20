@@ -66,22 +66,18 @@ local function extend(...)
 end
 
 
-local VinceBuilds = {}
-VinceBuilds.__index = VinceBuilds
-function VinceBuilds:new(o)
-	o = o or {}
-	o.mode = ModeLAS
-	o.defaultSettings = {
+VinceBuilds = {}
+local VinceBuilds = VinceBuilds
+
+function VinceBuilds:Init()
+	self.mode = ModeLAS
+	self.defaultSettings = {
 		equipments = {},
 		las = {},
 		hideIcon = false,
 		iconAlpha = 1
 	}
-	o.settings = deepCopy(o.defaultSettings)
-    return setmetatable(o, self)
-end
-
-function VinceBuilds:Init()
+	self.settings = deepCopy(self.defaultSettings)
     Apollo.RegisterAddon(self)
 end
 
@@ -853,6 +849,4 @@ function VinceBuilds.ToMap(list, defaultValue)
 	return map
 end
 
-
-local VinceBuildsInst = VinceBuilds:new()
-VinceBuildsInst:Init()
+VinceBuilds:Init()
