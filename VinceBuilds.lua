@@ -343,7 +343,10 @@ function VinceBuilds:ToggleVinceBuilds()
 end
 
 function VinceBuilds:PrepareBuild(build)
-	local equip = build.linkedEquipment and self.settings.equipments[build.linkedEquipment]
+	local equip
+	if build.linkedEquipment and self.settings.equipments[build.linkedEquipment] then
+		equip = self.settings.equipments[build.linkedEquipment]
+	end
 	local prep = {
 		actionSet = build.actionSet,
 		equip = build.equip or (equip and equip.equip),
@@ -443,7 +446,7 @@ function VinceBuilds:OnGridItemClick(wndControl, wndHandler, iRow, iCol, eMouseB
 		return
 	end
 	if self.mode == ModeLAS then
-		if build.linkedEquipment then
+		if build.linkedEquipment and self.settings.equipments[build.linkedEquipment] then
 			self.linkDropdown:SetText(self.settings.equipments[build.linkedEquipment].name)
 		else
 			self.linkDropdown:SetText("")
@@ -566,8 +569,12 @@ function VinceBuilds:OnDelete()
 	local tbl = self:GetModeTable()
 	if self.mode == ModeEquipment then
 		for i, las in ipairs(self.settings.las) do
-			if las.linkedEquipment == row then
-				las.linkedEquipment = nil
+			if las.linkedEquipment then
+				if las.linkedEquipment > row then
+					las.linkedEquipment = las.linkedEquipment - 1
+				elseif las.linkedEquipment == row then
+					las.linkedEquipment = nil
+				end
 			end
 		end
 	end
