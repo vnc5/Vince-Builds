@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Addon APIVersion="9" Name="VinceBuilds" Version="1.1.1" Author="Vince Addons@Jabbit" Description="Equip and LAS switcher.">
+<Addon APIVersion="10" Name="VinceBuilds" Version="1.1.2" Author="Vince Addons@Jabbit" Description="Equip and LAS switcher.">
 	<Form Name="VinceBuilds.xml"/>
     <Script Name="VinceBuilds.lua"/>
 </Addon>

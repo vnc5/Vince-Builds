@@ -395,7 +395,7 @@ function VinceBuilds:OnLinkDropdown()
 		btn:SetData(0)
 		btn:FindChild("BtnText"):SetText("No Costume")
 
-		for i = 1, GameLib.GetCostumeCount() do
+		for i = 1, CostumesLib.GetCostumeCount() do
 			local btn = Apollo.LoadForm(self.xmlDoc, "DropdownBtn", buttonList, self)
 			btn:SetData(i)
 			btn:FindChild("BtnText"):SetText("Costume " .. i)
@@ -713,7 +713,7 @@ function VinceBuilds:LoadBuild(build)
 
 		if self.isLoadingEquip then
 			if build.costume then
-				GameLib.SetCostumeIndex(build.costume)
+				CostumesLib.SetCostumeIndex(build.costume)
 			end
 			self:LoadEquip(build.equip)
 		end
