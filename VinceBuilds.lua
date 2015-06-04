@@ -89,6 +89,7 @@ function VinceBuilds:OnLoad()
 	self.xmlDoc = XmlDoc.CreateFromFile("VinceBuilds.xml")
 	self.xmlDoc:RegisterCallback("OnDocLoaded", self)
 
+    Apollo.RegisterEventHandler("InterfaceMenuListHasLoaded", "OnInterfaceMenuListHasLoaded", self)
 	Apollo.RegisterEventHandler("PlayerEquippedItemChanged", "OnPlayerEquippedItemChanged", self)
 	Apollo.RegisterEventHandler("UnitEnteredCombat", "OnUnitEnteredCombat", self)
 	Apollo.RegisterEventHandler("PlayerResurrected", "OnPlayerResurrected", self)
@@ -98,6 +99,15 @@ function VinceBuilds:OnLoad()
 	Apollo.RegisterSlashCommand("vincebuilds", "OnSlashCommand", self)
 
 	-- Event_FireGenericEvent("InterfaceMenuList_NewAddOn", "Vince Builds", {"ToggleVinceBuilds", "", "IconSprites:Icon_Windows_UI_CRB_Rival"})
+end
+
+function VinceBuilds:OnInterfaceMenuListHasLoaded()
+    -- OneVersion
+    local args = {"OneVersion_ReportAddonInfo", "VinceBuilds"}
+    for n in XmlDoc.CreateFromFile("toc.xml"):ToTable().Version:gmatch("%d+") do
+        table.insert(args, n)
+    end
+    Event_FireGenericEvent(unpack(args))
 end
 
 function VinceBuilds:OnDocLoaded()
