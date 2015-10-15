@@ -66,22 +66,18 @@ local function extend(...)
 end
 
 
-local VinceBuilds = {}
-VinceBuilds.__index = VinceBuilds
-function VinceBuilds:new(o)
-	o = o or {}
-	o.mode = ModeLAS
-	o.defaultSettings = {
+VinceBuilds = {}
+local VinceBuilds = VinceBuilds
+
+function VinceBuilds:Init()
+	self.mode = ModeLAS
+	self.defaultSettings = {
 		equipments = {},
 		las = {},
 		hideIcon = false,
 		iconAlpha = 1
 	}
-	o.settings = deepCopy(o.defaultSettings)
-    return setmetatable(o, self)
-end
-
-function VinceBuilds:Init()
+	self.settings = deepCopy(self.defaultSettings)
     Apollo.RegisterAddon(self)
 end
 
@@ -166,6 +162,7 @@ function VinceBuilds:HookIntoImprovedSalvage()
 	end
 end
 
+local keytexts = {equipments = "EQ: ", las = "LAS: "}
 function VinceBuilds:OnVinceBuildsClick(wndHandler, wndControl, eMouseButton, nPosX, nPosY, bDoubleClick)
 	if wndControl ~= self.wndMain then
 		return
@@ -180,8 +177,8 @@ function VinceBuilds:OnVinceBuildsClick(wndHandler, wndControl, eMouseButton, nP
 		container:DestroyChildren()
 		for i, build in ipairs(self.settings[key]) do
 			local btn = Apollo.LoadForm(self.xmlDoc, "BuildButton", container, self)
-			btn:SetData({key, i})
-			btn:FindChild("BtnText"):SetText(build.name)
+			btn:SetData(build)
+			btn:FindChild("BtnText"):SetText(keytexts[key]..build.name)
 		end
 
 		local oLeft, oTop, oRight, oBottom = self.wndMain:GetAnchorOffsets()
@@ -365,14 +362,20 @@ function VinceBuilds:PrepareBuild(build)
 	return prep
 end
 
-function VinceBuilds:OnBuildBtn(wndControl)
-	local key, i = unpack(wndControl:GetData())
-	local build = self.settings[key][i]
-	if not build then
-		return
+function VinceBuilds:OnBuildBtnUp(wndHandler, wndControl, eMouseButton)
+	local build = wndControl:GetData()
+	-- Load build
+	if eMouseButton == GameLib.CodeEnumInputMouse.Left then
+		self:LoadBuild(self:PrepareBuild(build))
+	-- Save build
+	elseif eMouseButton == GameLib.CodeEnumInputMouse.Right then
+		self:InsertBuild(build.name, build.equip and ModeEquipment or ModeLAS)
+		-- Also save linked equipment unless shift
+		if build.linkedEquipment and not Apollo.IsShiftKeyDown() then
+			local equip = self.settings.equipments[build.linkedEquipment]
+			self:InsertBuild(equip.name, ModeEquipment)
+		end
 	end
-
-	self:LoadBuild(self:PrepareBuild(build))
 	self.wndMain:FindChild("ChoiceContainer"):Close()
 end
 
@@ -870,6 +873,4 @@ function VinceBuilds.ToMap(list, defaultValue)
 	return map
 end
 
-
-local VinceBuildsInst = VinceBuilds:new()
-VinceBuildsInst:Init()
+VinceBuilds:Init()
