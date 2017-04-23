@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Addon APIVersion="11" Name="VinceBuilds" Version="1.2" Author="Vince Addons@Jabbit" Description="Equip and LAS switcher.">
+	<Script Name="GeminiHook/GeminiHook-1.0.lua"/>
 	<Form Name="VinceBuilds.xml"/>
-    <Script Name="VinceBuilds.lua"/>
+  <Script Name="VinceBuilds.lua"/>
 </Addon>
