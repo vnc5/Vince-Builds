@@ -95,6 +95,7 @@ function VinceBuilds:OnLoad()
 	Apollo.RegisterSlashCommand("vincebuilds", "OnSlashCommand", self)
 
 	-- Event_FireGenericEvent("InterfaceMenuList_NewAddOn", "Vince Builds", {"ToggleVinceBuilds", "", "IconSprites:Icon_Windows_UI_CRB_Rival"})
+	self:HookIntoImprovedSalvage()
 end
 
 function VinceBuilds:OnInterfaceMenuListHasLoaded()
@@ -129,20 +130,20 @@ function VinceBuilds:OnDocLoaded()
 
 	self:UpdateView()
 
-	self:HookIntoImprovedSalvage()
-
 --	Event_FireGenericEvent("WindowManagementAdd", {wnd = self.wndMain, strName = "Vince Builds"})
 	Event_FireGenericEvent("WindowManagementAdd", {wnd = self.wndConfig, strName = "Vince Builds Config", nSaveVersion = 2})
 	Event_FireGenericEvent("WindowManagementAdd", {wnd = self.wndOptions, strName = "Vince Builds Options"})
 end
 
 function VinceBuilds:HookIntoImprovedSalvage()
-	local improvedSalvage = Apollo.GetAddon("ImprovedSalvage")
-	if improvedSalvage then
-		local orig = improvedSalvage.OnSalvageAll
-		improvedSalvage.OnSalvageAll = function(...)
-			orig(...)
+	local addonInventory = Apollo.GetAddon("Inventory")
+	if not addonInventory then return end
 
+	local GeminiHook = Apollo.GetPackage("Gemini:Hook-1.0").tPackage
+	GeminiHook:Hook(Apollo, "LoadForm", function(xml, strName, wndParent, tHandler)
+		if strName ~= "ImprovedSalvageForm" or not tHandler then return end
+		local GeminiHook = Apollo.GetPackage("Gemini:Hook-1.0").tPackage
+		GeminiHook:PostHook(tHandler, "OnSalvageAll", function(this)
 			local equipments = {}
 			for i, equip in ipairs(self.settings.equipments) do
 				for chatLinkString in pairs(equip.equip) do
@@ -150,16 +151,16 @@ function VinceBuilds:HookIntoImprovedSalvage()
 				end
 			end
 
-			for i = #improvedSalvage.arItemList, 1, -1 do
-				local item = improvedSalvage.arItemList[i]
+			for i = #this.arItemList, 1, -1 do
+				local item = this.arItemList[i]
 				if item:IsEquippable() and equipments[item:GetChatLinkString()] then
-					table.remove(improvedSalvage.arItemList, i)
+					table.remove(this.arItemList, i)
 				end
 			end
 
-			improvedSalvage:RedrawAll()
-		end
-	end
+			this:RedrawAll()
+		end)
+	end)
 end
 
 local keytexts = {equipments = "EQ: ", las = "LAS: "}
@@ -748,7 +749,7 @@ end
 
 function VinceBuilds:LoadEquip(equip)
 	self.isLoadingEquip = true
-	
+
 	for key, item in ipairs(GameLib.GetPlayerUnit():GetInventoryItems()) do
 		local itemInBag = item.itemInBag
 		local validSlot = SavedEquipSlots[itemInBag:GetSlot()]
@@ -757,9 +758,9 @@ function VinceBuilds:LoadEquip(equip)
 			return
 		end
 	end
-	
+
 	self.isLoadingEquip = false
-	
+
 	self:UpdateFinishedLoadingBuild()
 end
 
@@ -782,18 +783,18 @@ end
 
 function VinceBuilds:LoadActionSet(actionSet)
 	self.isLoadingActionSet = true
-	
+
 	if actionSet.spec ~= AbilityBook.GetCurrentSpec() then
 		AbilityBook.SetCurrentSpec(actionSet.spec)
 		return
 	end
-	
+
 	self.ResetSpellTiers()
-	
+
 	for abilityId, tier in pairs(actionSet.abilityTiers) do
 		AbilityBook.UpdateSpellTier(abilityId, tier)
 	end
-	
+
 	local currentActionSet = ActionSetLib.GetCurrentActionSet()
 	for key, abilityId in ipairs(actionSet.abilities) do
 		currentActionSet[key] = abilityId
@@ -803,9 +804,9 @@ function VinceBuilds:LoadActionSet(actionSet)
 	if actionSet.innateIndex and actionSet.innateIndex ~= GameLib.GetCurrentClassInnateAbilityIndex() then
 		GameLib.SetCurrentClassInnateAbilityIndex(actionSet.innateIndex)
 	end
-	
+
 	self.isLoadingActionSet = false
-	
+
 	self:UpdateFinishedLoadingBuild()
 end
 
@@ -834,7 +835,7 @@ function VinceBuilds:OnPlayerEquippedItemChanged()
 	if not self.isLoadingEquip then
 		return
 	end
-	
+
 	self:LoadEquip(self.loadBuild.equip)
 end
 
